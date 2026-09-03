@@ -1,0 +1,84 @@
+.speaker {
+  margin: 18px 0 10px;
+  color: #b47752;
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: .18em;
+}
+
+.transcript-episode {
+  margin-top: 12px;
+  color: #66766d;
+  font-size: 9px;
+  font-weight: 650;
+  letter-spacing: .08em;
+  line-height: 1.35;
+  text-transform: uppercase;
+}
+
+.live-caption {
+  display: flex;
+  min-height: 4.7em;
+  align-items: center;
+  justify-content: center;
+  color: #33463e;
+  font: 500 clamp(19px, 1.7vw, 29px)/1.18 'DM Sans', sans-serif;
+  animation: caption-in .24s ease;
+}
+
+.transcript-loading,
+.transcript-unavailable {
+  color: #78867f;
+  font-size: clamp(15px, 1.25vw, 20px);
+  font-style: italic;
+}
+
+/* Keep the backing bitmap from becoming a grid sizing input. */
+.painter {
+  min-height: 0;
+  grid-template-rows: 57px auto auto;
+  align-content: start;
+}
+
+.easel {
+  width: 100%;
+  height: clamp(360px, calc(100vh - 390px), 620px);
+  min-height: 0;
+}
+
+.canvas-shell {
+  min-width: 0;
+  min-height: 0;
+  contain: layout paint size;
+}
+
+.canvas-shell canvas {
+  min-width: 0;
+  min-height: 0;
+  contain: strict;
+}
+
+@media (min-width: 681px) and (max-width: 1050px) {
+  .studio {
+    grid-template-columns: minmax(250px, 1fr) minmax(160px, 20vw) minmax(250px, 1fr);
+    gap: 1.4vw;
+    padding-bottom: 142px;
+  }
+
+  .transcript {
+    grid-column: auto;
+    grid-row: auto;
+    position: sticky;
+    top: 100px;
+    padding: 20px 5px;
+  }
+
+  .painter { grid-row: auto; }
+  .tool-bench { position: fixed; }
+  .toast { bottom: 134px; }
+  .paper-tools { display: grid; }
+}
+
+@media (max-width: 680px) {
+  .easel { height: 520px; }
+}

@@ -1,0 +1,23 @@
+{
+  "name": "happy-little-studio",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vite build",
+    "deploy": "npm run build && wrangler deploy"
+  },
+  "dependencies": {
+    "@videojs/react": "^10.0.0-beta.32",
+    "@vitejs/plugin-react": "latest",
+    "dialkit": "^1.4.3",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "react-draggable": "^4.7.1",
+    "react-resizable": "^4.0.2",
+    "vite": "latest"
+  },
+  "devDependencies": {
+    "wrangler": "^4.128.0"
+  }
+}
