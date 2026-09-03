@@ -786,40 +786,75 @@ export function createSim(canvas, dims = {}) {
     return c2;
   }
 
-  const UNDO_DEPTH = 6;
-  const undoRing = [];
-  let undoHead = 0, undoCount = 0;
-  function undoSlot(i) {
-    if (!undoRing[i]) undoRing[i] = Array.from({ length: 6 }, () => {
+  // Seven snapshots give six reversible steps while sharing one bounded GPU
+  // history for both undo and redo. This avoids a second texture ring and its
+  // memory cost.
+  const HISTORY_LIMIT = 7;
+  const history = [];
+  const freeSnapshots = [];
+  let historyCursor = -1;
+  let currentCaptured = false;
+
+  function createSnapshot() {
+    return Array.from({ length: 6 }, () => {
       const tex = makeTex(gl, SIM_W, SIM_H);
       return { tex, fbo: makeFbo(gl, [tex]) };
     });
-    return undoRing[i];
   }
+
   function copyInto(srcFbo, attachment, dstTex) {
     gl.bindFramebuffer(gl.FRAMEBUFFER, srcFbo);
     gl.readBuffer(gl.COLOR_ATTACHMENT0 + attachment);
     gl.bindTexture(gl.TEXTURE_2D, dstTex);
     gl.copyTexSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 0, 0, SIM_W, SIM_H);
   }
-  function pushUndo() {
-    const s = undoSlot(undoHead);
-    copyInto(waterF[wCur], 0, s[0].tex);
-    for (let i = 0; i < 4; i++) copyInto(pigF[pCur], i, s[i + 1].tex);
-    copyInto(groundF[gCur], 0, s[5].tex);
-    undoHead = (undoHead + 1) % UNDO_DEPTH;
-    undoCount = Math.min(undoCount + 1, UNDO_DEPTH);
+
+  function discardFuture() {
+    if (historyCursor >= history.length - 1) return;
+    freeSnapshots.push(...history.splice(historyCursor + 1));
   }
-  function popUndo() {
-    if (!undoCount) return false;
-    undoHead = (undoHead - 1 + UNDO_DEPTH) % UNDO_DEPTH;
-    undoCount--;
-    const s = undoRing[undoHead];
-    copyInto(s[0].fbo, 0, water[wCur]);
+
+  function captureCurrent() {
+    discardFuture();
+    const snapshot = freeSnapshots.pop() || createSnapshot();
+    copyInto(waterF[wCur], 0, snapshot[0].tex);
+    for (let i = 0; i < 4; i++) copyInto(pigF[pCur], i, snapshot[i + 1].tex);
+    copyInto(groundF[gCur], 0, snapshot[5].tex);
+    history.push(snapshot);
+    if (history.length > HISTORY_LIMIT) freeSnapshots.push(history.shift());
+    historyCursor = history.length - 1;
+    currentCaptured = true;
+  }
+
+  function restoreSnapshot(snapshot) {
+    copyInto(snapshot[0].fbo, 0, water[wCur]);
     const dst = [pig[pCur].susA, pig[pCur].susB, pig[pCur].depA, pig[pCur].depB];
-    for (let i = 0; i < 4; i++) copyInto(s[i + 1].fbo, 0, dst[i]);
-    copyInto(s[5].fbo, 0, ground[gCur]);
+    for (let i = 0; i < 4; i++) copyInto(snapshot[i + 1].fbo, 0, dst[i]);
+    copyInto(snapshot[5].fbo, 0, ground[gCur]);
     render();
+  }
+
+  function pushUndo() {
+    if (currentCaptured) discardFuture();
+    else captureCurrent();
+    // Callers invoke pushUndo immediately before a mutation.
+    currentCaptured = false;
+  }
+
+  function popUndo() {
+    if (!currentCaptured) captureCurrent();
+    if (historyCursor <= 0) return false;
+    historyCursor -= 1;
+    restoreSnapshot(history[historyCursor]);
+    currentCaptured = true;
+    return true;
+  }
+
+  function popRedo() {
+    if (!currentCaptured || historyCursor >= history.length - 1) return false;
+    historyCursor += 1;
+    restoreSnapshot(history[historyCursor]);
+    currentCaptured = true;
     return true;
   }
 
@@ -828,7 +863,7 @@ export function createSim(canvas, dims = {}) {
 
   return {
     gl, p, SIM_W, SIM_H, frame, render, capturePNG, setSlots, captureMask, bakeGround,
-    setBacklight, setLightPos, setXray, setFibers, pushUndo, popUndo,
+    setBacklight, setLightPos, setXray, setFibers, pushUndo, popUndo, popRedo,
     clearPaint: clearTargets,
     setPaper: (name) => { genPaper(name); clearTargets(); render(); },
     papers: PAPERS,
@@ -1100,11 +1135,26 @@ export function createWatercolorEngine(canvas, onPaint) {
     canvas,
     sim,
     setOptions(next) {
+      // React supplies the complete settings object whenever any brush setting
+      // changes. Rebuilding the paper clears paint, so only do that after an
+      // actual paper selection—not after changing color, size, water, etc.
+      const paperChanged = Boolean(next.paper && next.paper !== options.paper);
+      const colorChanged = Boolean(
+        next.color && next.color.toLowerCase() !== options.color.toLowerCase()
+      );
+
+      // Deposited pigment stores palette-slot weights. Freeze those weights
+      // into the RGB ground with the *old* optical constants before replacing
+      // slot 0, otherwise every earlier stroke in that slot changes color too.
+      if (colorChanged && !paperChanged && useWebGL && sim) {
+        sim.bakeGround();
+      }
+
       options = { ...options, ...next };
-      if (next.paper && useWebGL && sim) {
+      if (paperChanged && useWebGL && sim) {
         sim.setPaper(next.paper);
       }
-      if (next.color) {
+      if (colorChanged) {
         // Map selected color into active simulation slot
         const pig = getPigmentForColor(next.color);
         activePigments[0] = pig;
@@ -1146,6 +1196,10 @@ export function createWatercolorEngine(canvas, onPaint) {
     },
     undo() {
       if (useWebGL && sim) return sim.popUndo();
+      return false;
+    },
+    redo() {
+      if (useWebGL && sim) return sim.popRedo();
       return false;
     },
     paint(points, next = {}) {

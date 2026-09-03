@@ -373,18 +373,18 @@ function EpisodeModal({ isOpen, onClose, currentEpisode, onSelectEpisode }) {
 
   return (
     <div className="modal-backdrop" onClick={onClose} role="dialog" aria-modal="true" aria-label="Browse Bob Ross Episodes">
-      <div className="modal-sheet" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-head">
-          <div className="modal-title-group">
-            <span className="modal-eyebrow">EPISODE ARCHIVE ({BOB_ROSS_EPISODES.length} PAINTINGS)</span>
-            <h2>Select a Painting Lesson</h2>
+      <div className="episode-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <div>
+            <h3>Select a Painting Lesson</h3>
+            <p>Browse by season, title, or the colors Bob uses.</p>
           </div>
           <button className="modal-close" onClick={onClose} aria-label="Close modal">✕</button>
         </div>
 
-        <div className="modal-search-row">
-          <div className="search-box">
-            <span className="search-icon">🔍</span>
+        <div className="modal-filters">
+          <div className="modal-search">
+            <span aria-hidden="true">⌕</span>
             <input
               type="text"
               placeholder="Search by title, season, or pigment (e.g. Mountain, S2, Alizarin)..."
@@ -394,29 +394,29 @@ function EpisodeModal({ isOpen, onClose, currentEpisode, onSelectEpisode }) {
             />
             {search && <button className="clear-search" onClick={() => setSearch('')}>✕</button>}
           </div>
-        </div>
-
-        <div className="season-pills">
-          <button
-            className={`pill ${seasonFilter === 'all' ? 'active' : ''}`}
-            onClick={() => setSeasonFilter('all')}
-          >
-            All Seasons ({BOB_ROSS_EPISODES.length})
-          </button>
-          {SEASONS.map((s) => (
+          <div className="season-pills">
             <button
-              key={s}
-              className={`pill ${seasonFilter === String(s) ? 'active' : ''}`}
-              onClick={() => setSeasonFilter(String(s))}
+              className={`pill ${seasonFilter === 'all' ? 'active' : ''}`}
+              onClick={() => setSeasonFilter('all')}
             >
-              S{s}
+              All Seasons ({BOB_ROSS_EPISODES.length})
             </button>
-          ))}
+            {SEASONS.map((s) => (
+              <button
+                key={s}
+                className={`pill ${seasonFilter === String(s) ? 'active' : ''}`}
+                onClick={() => setSeasonFilter(String(s))}
+              >
+                S{s}
+              </button>
+            ))}
+          </div>
         </div>
 
-        <div className="modal-grid-results">
+        <div className="modal-content">
+          <div className="episodes-grid">
           {filtered.length === 0 ? (
-            <div className="modal-empty-state">
+            <div className="no-episodes">
               <p>No paintings found matching "{search}"</p>
               <button className="pill" onClick={() => { setSearch(''); setSeasonFilter('all'); }}>Reset filters</button>
             </div>
@@ -426,7 +426,7 @@ function EpisodeModal({ isOpen, onClose, currentEpisode, onSelectEpisode }) {
               return (
                 <div
                   key={`${ep.season}-${ep.episode}-${ep.id}`}
-                  className={`episode-card ${isSelected ? 'active' : ''}`}
+                  className={`episode-card ${isSelected ? 'selected' : ''}`}
                   onClick={() => {
                     onSelectEpisode(ep);
                     onClose();
@@ -453,18 +453,18 @@ function EpisodeModal({ isOpen, onClose, currentEpisode, onSelectEpisode }) {
                     ) : (
                       <div className="card-placeholder">🎨</div>
                     )}
-                    <span className="card-badge">S{ep.season} · E{ep.episode}</span>
-                    {isSelected && <span className="card-current-tag">Active</span>}
+                    <span className="card-season-badge">S{ep.season} · E{ep.episode}</span>
+                    {isSelected && <span className="card-playing-badge">NOW PLAYING</span>}
                   </div>
                   <div className="card-info">
                     <h3 className="card-title" title={ep.title}>{ep.title}</h3>
                     <div className="card-meta">
                       <span className="color-count">{ep.numColors || ep.colors.length} colors</span>
-                      <div className="card-swatches">
+                      <div className="color-dots">
                         {ep.colorHex.slice(0, 7).map((hex, ci) => (
                           <span key={ci} style={{ background: hex }} title={ep.colors[ci] || ''} />
                         ))}
-                        {ep.colorHex.length > 7 && <span className="swatch-more">+{ep.colorHex.length - 7}</span>}
+                        {ep.colorHex.length > 7 && <span className="more-dots">+{ep.colorHex.length - 7}</span>}
                       </div>
                     </div>
                   </div>
@@ -472,6 +472,7 @@ function EpisodeModal({ isOpen, onClose, currentEpisode, onSelectEpisode }) {
               );
             })
           )}
+          </div>
         </div>
       </div>
     </div>
@@ -627,6 +628,81 @@ const BOB_ROSS_BRUSHES = [
   { id: 'mop', icon: '☁️', name: 'Blender', title: 'Mop Blender Brush (Mist, Waterfalls & Soft Reflections)' }
 ];
 
+const ONBOARDING_STEPS = [
+  {
+    eyebrow: 'WELCOME TO THE STUDIO',
+    title: 'Two easels. One quiet lesson.',
+    body: 'Paint beside Bob on the left while your Codex agent works from its own video and watercolor canvas on the right.',
+    note: 'There are no mistakes here—only different paintings.'
+  },
+  {
+    eyebrow: 'YOUR WATERCOLOR BENCH',
+    title: 'Load the brush, then let water wander.',
+    body: 'Choose a brush, tune water and pigment, mix physical colors, or add a custom hue. Hover or focus any tool for a quick field note.',
+    note: 'Undo and redo follow whichever easel you touched last.'
+  },
+  {
+    eyebrow: 'PAINT WITH AN AGENT',
+    title: 'The agent can watch, listen, and paint.',
+    body: 'WebMCP gives the agent its own lesson controls, live transcript cues, and normalized brush strokes—without taking over your easel.',
+    note: 'Compete, collaborate, or simply make two happy little worlds.'
+  }
+];
+
+function Onboarding({ open, onFinish }) {
+  const [step, setStep] = useState(0);
+
+  useEffect(() => {
+    if (open) setStep(0);
+  }, [open]);
+
+  if (!open) return null;
+  const content = ONBOARDING_STEPS[step];
+  const isLast = step === ONBOARDING_STEPS.length - 1;
+
+  return (
+    <div className="onboarding-backdrop" role="dialog" aria-modal="true" aria-labelledby="onboarding-title">
+      <div className="onboarding-card">
+        <button className="onboarding-skip" type="button" onClick={onFinish}>Skip tour</button>
+        <div className="onboarding-portrait" aria-hidden="true">
+          <span className="onboarding-halo" />
+          <img src="/bob-ross-guide.png" alt="" />
+        </div>
+        <div className="onboarding-copy" key={step}>
+          <span className="onboarding-eyebrow">{content.eyebrow}</span>
+          <h2 id="onboarding-title">{content.title}</h2>
+          <p>{content.body}</p>
+          <blockquote>{content.note}</blockquote>
+        </div>
+        <div className="onboarding-footer">
+          <div className="onboarding-dots" aria-label={`Step ${step + 1} of ${ONBOARDING_STEPS.length}`}>
+            {ONBOARDING_STEPS.map((item, index) => (
+              <button
+                key={item.title}
+                type="button"
+                className={index === step ? 'active' : ''}
+                onClick={() => setStep(index)}
+                aria-label={`Go to step ${index + 1}`}
+                aria-current={index === step ? 'step' : undefined}
+              />
+            ))}
+          </div>
+          <div className="onboarding-actions">
+            {step > 0 && <button type="button" className="onboarding-back" onClick={() => setStep((value) => value - 1)}>Back</button>}
+            <button
+              type="button"
+              className="onboarding-next"
+              onClick={() => isLast ? onFinish() : setStep((value) => value + 1)}
+            >
+              {isLast ? 'Start painting' : 'Next'} <span aria-hidden="true">→</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 
 export default function App() {
   const humanEngine = useRef(null), agentEngine = useRef(null), humanVideo = useRef(null), agentVideo = useRef(null);
@@ -646,6 +722,7 @@ export default function App() {
   const [active, setActive] = useState('human');
   const [mix, setMix] = useState([color]);
   const [mixQueue, setMixQueue] = useState(['#021E44', '#FFEC00']);
+  const [customColors, setCustomColors] = useState([]);
   // Bob Ross color palette dynamically derived from current episode
   const currentEpisodePigments = useMemo(() => {
     if (episode?.colors?.length && episode?.colorHex?.length) {
@@ -693,6 +770,7 @@ export default function App() {
   const [selectorOpen, setSelectorOpen] = useState(false);
   const [mixModalOpen, setMixModalOpen] = useState(false);
   const [plateModalOpen, setPlateModalOpen] = useState(false);
+  const [onboardingOpen, setOnboardingOpen] = useState(false);
   const toastTimer = useRef(0);
 // Resizable layout states with collapse toggles
   const [resizableEnabled, setResizableEnabled] = useState(true);
@@ -709,6 +787,16 @@ export default function App() {
   const humanVideoHeight = useMemo(() => Math.round(humanVideoWidth * (9 / 16)), [humanVideoWidth]);
   const humanVideoNodeRef = useRef(null);
   const [isInteractingVideo, setIsInteractingVideo] = useState(false);
+
+  useEffect(() => {
+    try {
+      if (window.localStorage.getItem('joy-of-painting-onboarding') !== 'complete') {
+        setOnboardingOpen(true);
+      }
+    } catch {
+      setOnboardingOpen(true);
+    }
+  }, []);
 
   // Sync palette to watercolor simulation engines safely (bakes ground to avoid wiping canvas)
   useEffect(() => {
@@ -777,6 +865,8 @@ export default function App() {
         }),
       clear: () => agentEngine.current?.clear(),
       dry: () => agentEngine.current?.dry(),
+      undo: () => agentEngine.current?.undo(),
+      redo: () => agentEngine.current?.redo(),
       eyedrop,
       setTranscript: (videoId, source) => {
         const cues = normalizeCues(source);
@@ -945,14 +1035,15 @@ export default function App() {
       },
       {
         name: 'manage_agent_canvas',
-        description: 'Dry, undo, or clear the agent’s own watercolor canvas. Clear removes the agent painting, so use it deliberately.',
-        inputSchema: { type: 'object', properties: { action: { type: 'string', enum: ['dry', 'undo', 'clear'] } }, required: ['action'] },
+        description: 'Dry, undo, redo, or clear the agent’s own watercolor canvas. Clear removes the agent painting, so use it deliberately.',
+        inputSchema: { type: 'object', properties: { action: { type: 'string', enum: ['dry', 'undo', 'redo', 'clear'] } }, required: ['action'] },
         annotations: { readOnlyHint: false },
         execute: ({ action }) => {
           const engine = agentEngine.current;
           if (!engine) return webMcpResult('The agent canvas is not ready yet.', { ok: false });
           if (action === 'dry') engine.dry();
           else if (action === 'undo') engine.undo();
+          else if (action === 'redo') engine.redo();
           else if (action === 'clear') engine.clear();
           else return webMcpResult('Unknown canvas action.', { ok: false });
           return webMcpResult(`Agent canvas ${action} complete.`, { ok: true, action, canvas: engine.stats() });
@@ -977,7 +1068,30 @@ export default function App() {
   const pickColor = (next, label) => {
     setColor(next);
     setMix((items) => [...items.slice(-2), next]);
+    setMixQueue((items) => [items[1] || items[0] || next, next]);
     if (label) notify(`Loaded ${label}`);
+  };
+
+  const addCustomColor = (next) => {
+    const normalized = String(next).toUpperCase();
+    setCustomColors((items) => [normalized, ...items.filter((item) => item !== normalized)].slice(0, 6));
+    pickColor(normalized, `custom pigment ${normalized}`);
+  };
+
+  const runHistoryAction = (action) => {
+    const engine = active === 'agent' ? agentEngine.current : humanEngine.current;
+    const changed = engine?.[action]?.();
+    const label = active === 'agent' ? 'Agent easel' : 'Your easel';
+    notify(changed ? `${label}: ${action === 'undo' ? 'last stroke lifted' : 'stroke restored'}.` : `${label}: nothing to ${action}.`);
+  };
+
+  const finishOnboarding = () => {
+    try {
+      window.localStorage.setItem('joy-of-painting-onboarding', 'complete');
+    } catch {
+      /* private browsing may block local storage */
+    }
+    setOnboardingOpen(false);
   };
 
   const mixColor = () => {
@@ -1077,6 +1191,17 @@ export default function App() {
             title="Reset easel panels and videos to default layout"
           >
             ↺ Reset
+          </button>
+
+          <button
+            className="studio-guide-btn"
+            type="button"
+            onClick={() => setOnboardingOpen(true)}
+            data-tooltip="Replay the gentle studio introduction."
+            aria-label="Open studio guide"
+          >
+            <img src="/bob-ross-guide.png" alt="" />
+            Guide
           </button>
 
           <button className="finish" onClick={exportPainting}>Frame my painting</button>
@@ -1317,215 +1442,185 @@ export default function App() {
 
       
       {/* Bottom Tool Bench */}
-      <footer className="tool-bench">
-        {/* Gesture Mode Tools */}
-        <div className="mode-tools">
-          <span className="eyebrow">GESTURE</span>
-          {[
-            { id: 'brush', icon: '✦', label: 'brush' },
-            { id: 'water', icon: '◌', label: 'water' },
-            { id: 'lift', icon: '○', label: 'lift' }
-          ].map((item) => (
-            <button
-              key={item.id}
-              className={mode === item.id ? 'active' : ''}
-              onClick={() => setMode(item.id)}
-              title={`${item.label} mode`}
-            >
-              <b>{item.icon}</b>
-              <small>{item.label}</small>
-            </button>
-          ))}
-        </div>
+      <footer className="tool-bench" aria-label="Watercolor editor">
+        <div className="bench-row bench-row-main">
+          <section className="bench-group history-tools" aria-label="Canvas history">
+            <div className="bench-group-title">
+              <span>HISTORY</span>
+              <small>{active === 'agent' ? 'Agent easel' : 'Your easel'}</small>
+            </div>
+            <div className="history">
+              <button type="button" onClick={() => runHistoryAction('undo')} data-tooltip="Lift the most recent stroke from the active easel." aria-label="Undo last stroke">
+                <b>↶</b><small>Undo</small>
+              </button>
+              <button type="button" onClick={() => runHistoryAction('redo')} data-tooltip="Restore the stroke you most recently undid." aria-label="Redo last stroke">
+                <b>↷</b><small>Redo</small>
+              </button>
+            </div>
+          </section>
 
-        {/* Bob Ross Brushes */}
-        <div className="brushes">
-          <span className="eyebrow">BRUSH</span>
-          <div className="bob-brush-list">
-            {BOB_ROSS_BRUSHES.map((b) => (
-              <button
-                key={b.id}
-                className={`bob-brush-btn ${brush === b.id ? 'active' : ''}`}
-                onClick={() => {
-                  setBrush(b.id);
-                  notify(`Selected ${b.title}`);
-                }}
-                title={b.title}
-              >
-                <span className="bob-brush-icon">{b.icon}</span>
-                <span className="bob-brush-label">{b.name}</span>
+          <section className="bench-group mode-tools" aria-label="Painting gesture">
+            <span className="eyebrow">GESTURE</span>
+            {[
+              { id: 'brush', icon: '✦', label: 'brush', tip: 'Apply loaded pigment with the selected brush.' },
+              { id: 'water', icon: '◌', label: 'water', tip: 'Add clean water to soften edges and create blooms.' },
+              { id: 'lift', icon: '○', label: 'lift', tip: 'Use a thirsty brush to lift wet pigment from the paper.' }
+            ].map((item) => (
+              <button key={item.id} className={mode === item.id ? 'active' : ''} onClick={() => setMode(item.id)} data-tooltip={item.tip} aria-label={`${item.label} mode`}>
+                <b>{item.icon}</b>
+                <small>{item.label}</small>
               </button>
             ))}
-          </div>
-        </div>
+          </section>
 
-        {/* Dynamics Sliders */}
-        <div className="sliders">
-          <label>
-            <span className="eyebrow">SIZE</span>
-            <input
-              type="range"
-              min="2"
-              max="48"
-              value={size}
-              onChange={(e) => setSize(Number(e.target.value))}
-            />
-            <small>{size}</small>
-          </label>
-          <label>
-            <span className="eyebrow">WATER</span>
-            <input
-              type="range"
-              min="0"
-              max="1"
-              step="0.01"
-              value={water}
-              onChange={(e) => setWater(Number(e.target.value))}
-            />
-            <small>{Math.round(water * 100)}</small>
-          </label>
-          <label>
-            <span className="eyebrow">PIGMENT</span>
-            <input
-              type="range"
-              min="0.1"
-              max="1"
-              step="0.01"
-              value={load}
-              onChange={(e) => setLoad(Number(e.target.value))}
-            />
-            <small>{Math.round(load * 100)}</small>
-          </label>
-        </div>
+          <section className="bench-group brushes" aria-label="Bob Ross brushes">
+            <span className="eyebrow">BRUSH</span>
+            <div className="bob-brush-list">
+              {BOB_ROSS_BRUSHES.map((b) => (
+                <button
+                  key={b.id}
+                  className={`bob-brush-btn ${brush === b.id ? 'active' : ''}`}
+                  onClick={() => {
+                    setBrush(b.id);
+                    notify(`Selected ${b.title}`);
+                  }}
+                  data-tooltip={b.title}
+                  aria-label={b.title}
+                >
+                  <span className="bob-brush-icon">{b.icon}</span>
+                  <span className="bob-brush-label">{b.name}</span>
+                </button>
+              ))}
+            </div>
+          </section>
 
-        {/* Dynamic Bob Ross Episode Palette */}
-        <div className="palette-wrap">
-          <div className="palette-label">
-            <span className="eyebrow">
-              BOB'S PALETTE · S{episode?.season || 1} E{episode?.episode || 1}
-            </span>
-            <em>{currentEpisodePigments.find((p) => p[1].toLowerCase() === color.toLowerCase())?.[0] || color}</em>
-          </div>
-          <div className="palette">
-            {currentEpisodePigments.map(([name, val]) => (
-              <button
-                key={name}
-                className={`color ${color.toLowerCase() === val.toLowerCase() ? 'active' : ''}`}
-                onClick={() => pickColor(val, name)}
-                style={{ '--color': val }}
-                aria-label={name}
-                title={`${name} (${val})`}
-              />
-            ))}
-          </div>
-        </div>
+          <section className="bench-group sliders" aria-label="Paint dynamics">
+            <label data-tooltip="Controls the footprint of each brush mark.">
+              <span className="eyebrow">SIZE <small>{size}px</small></span>
+              <input type="range" min="2" max="48" value={size} onChange={(e) => setSize(Number(e.target.value))} aria-label="Brush size" />
+            </label>
+            <label data-tooltip="More water increases flow, blooms, and softer edges.">
+              <span className="eyebrow">WATER <small>{Math.round(water * 100)}%</small></span>
+              <input type="range" min="0" max="1" step="0.01" value={water} onChange={(e) => setWater(Number(e.target.value))} aria-label="Water amount" />
+            </label>
+            <label data-tooltip="More pigment makes denser, darker watercolor marks.">
+              <span className="eyebrow">PIGMENT <small>{Math.round(load * 100)}%</small></span>
+              <input type="range" min="0.1" max="1" step="0.01" value={load} onChange={(e) => setLoad(Number(e.target.value))} aria-label="Pigment load" />
+            </label>
+          </section>
 
-        {/* Dedicated Kubelka-Munk Physical Color Mixing Station */}
-        <div className="km-mixing-station">
-          <div className="km-station-head">
-            <span className="eyebrow" style={{ color: '#265b32' }}>
-              KUBELKA-MUNK PHYSICAL MIXING
-            </span>
-            <button
-              className="mix-help-btn"
-              onClick={() => setMixModalOpen(true)}
-              title="Learn how color mixing works (Kubelka-Munk science)"
-              aria-label="Color mixing tutorial"
-            >
-              ? Science
+          <section className="bench-group palette-wrap" aria-label="Pigment palette">
+            <div className="palette-label">
+              <span className="eyebrow">BOB'S PALETTE · S{episode?.season || 1} E{episode?.episode || 1}</span>
+              <em>{currentEpisodePigments.find((p) => p[1].toLowerCase() === color.toLowerCase())?.[0] || color}</em>
+            </div>
+            <div className="palette">
+              {currentEpisodePigments.map(([name, val]) => (
+                <button
+                  key={name}
+                  className={`color ${color.toLowerCase() === val.toLowerCase() ? 'active' : ''}`}
+                  onClick={() => pickColor(val, name)}
+                  style={{ '--color': val }}
+                  aria-label={name}
+                  data-tooltip={`${name} · ${val}`}
+                />
+              ))}
+              {customColors.map((val) => (
+                <button
+                  key={val}
+                  className={`color custom-swatch ${color.toLowerCase() === val.toLowerCase() ? 'active' : ''}`}
+                  onClick={() => pickColor(val, `custom pigment ${val}`)}
+                  style={{ '--color': val }}
+                  aria-label={`Custom pigment ${val}`}
+                  data-tooltip={`Custom pigment · ${val}`}
+                />
+              ))}
+              <label className="custom-color-picker" data-tooltip="Choose any color and add it to your pigment row.">
+                <input type="color" value={color} onChange={(event) => addCustomColor(event.target.value)} aria-label="Add a custom pigment color" />
+                <span className="custom-color-preview" style={{ background: color }} />
+                <b>+ Custom</b>
+              </label>
+            </div>
+          </section>
+
+          <section className="bench-group finish-tools" aria-label="Paper and finishing tools">
+            <div className="paper-tools">
+              <span className="eyebrow">PAPER</span>
+              {[
+                ['hot', 'Smooth hot-pressed paper keeps marks crisp and controlled.'],
+                ['cold', 'Cold-pressed paper balances soft flow with visible grain.'],
+                ['rough', 'Rough paper gives pigment deep texture and granulation.']
+              ].map(([name, tip]) => (
+                <button key={name} className={paper === name ? 'active' : ''} onClick={() => setPaper(name)} data-tooltip={tip}>{name}</button>
+              ))}
+            </div>
+            <button className="water-cup" onClick={() => { setMode('water'); notify('Beat the devil out of it!'); }} data-tooltip="Rinse the brush and switch to clean-water painting." aria-label="Rinse brush">
+              <span>◌</span><small>RINSE</small>
             </button>
-          </div>
-          <div className="km-station-body">
-            <div className="km-slot" title={`Base Pigment: ${mixData.name1}`}>
-              <span className="km-slot-swatch" style={{ background: mixData.p1 }} />
-              <span className="km-slot-label">{mixData.name1}</span>
-            </div>
-            <span className="km-plus">+</span>
-            <div className="km-slot" title={`Second Pigment: ${mixData.name2}`}>
-              <span className="km-slot-swatch" style={{ background: mixData.p2 }} />
-              <span className="km-slot-label">{mixData.name2}</span>
-            </div>
-            <span className="km-arrow">→</span>
-            <div className="km-result-slot" title={`Kubelka-Munk Subtractive Blend: ${mixData.km}`}>
-              <span className="km-result-swatch" style={{ background: mixData.km }} />
-              <div className="km-result-meta">
-                <span className="km-badge">K-M Physical</span>
-                <span className="km-hex">{mixData.km}</span>
-              </div>
-            </div>
-            <div className="km-compare-slot" title={`Naive Computer RGB Average: ${mixData.rgb} (Muddy Gray)`}>
-              <span className="km-compare-swatch" style={{ background: mixData.rgb }} />
-              <div className="km-result-meta">
-                <span className="km-badge-rgb">RGB Avg</span>
-                <span className="km-hex">{mixData.rgb}</span>
-              </div>
-            </div>
             <button
-              className="km-mix-btn"
+              className="action-btn"
               onClick={() => {
-                setColor(mixData.km);
-                notify(`Applied Kubelka-Munk blend: ${mixData.km} (${mixData.name1} + ${mixData.name2})`);
+                (active === 'agent' ? agentEngine.current : humanEngine.current)?.dry();
+                notify('Baked glaze into the active paper ground.');
               }}
-              title="Load this physical blend directly onto your brush"
+              data-tooltip="Dry the active easel so the next wash becomes a separate glaze."
             >
-              <span>🗡️ Blend</span>
+              Bake
             </button>
-          </div>
-        </div>
-
-        {/* Paper Presets */}
-        <div className="paper-tools">
-          <span className="eyebrow">PAPER</span>
-          {['hot', 'cold', 'rough'].map((name) => (
             <button
-              key={name}
-              className={paper === name ? 'active' : ''}
-              onClick={() => setPaper(name)}
+              className="action-btn"
+              onClick={() => {
+                (active === 'agent' ? agentEngine.current : humanEngine.current)?.clear();
+                notify('Fresh canvas prepared on the active easel.');
+              }}
+              data-tooltip="Clear the active easel and prepare fresh paper."
             >
-              {name}
+              Fresh
             </button>
-          ))}
+          </section>
         </div>
 
-        {/* Rinse Brush */}
-        <button
-          className="water-cup"
-          onClick={() => {
-            setMode('water');
-            notify('Beat the devil out of it!');
-          }}
-          title="Rinse brush"
-        >
-          <span>◌</span>
-          <small>RINSE</small>
-        </button>
-
-        {/* Bake Glaze */}
-        <button
-          className="action-btn"
-          onClick={() => {
-            humanEngine.current?.dry();
-            notify('Baked glaze into paper ground.');
-          }}
-          title="Bake glaze permanently into paper surface"
-        >
-          Bake
-        </button>
-
-        {/* Fresh Canvas */}
-        <button
-          className="action-btn"
-          onClick={() => {
-            humanEngine.current?.clear();
-            notify('Fresh canvas prepared.');
-          }}
-          title="Clear canvas"
-        >
-          Fresh
-        </button>
+        <div className="bench-row bench-row-mixing">
+          <div className="km-mixing-station">
+            <div className="km-station-head">
+              <span className="eyebrow">WET MIXING WELL</span>
+              <button className="mix-help-btn" onClick={() => setMixModalOpen(true)} data-tooltip="See why physical pigment mixing differs from RGB light." aria-label="Color mixing tutorial">? Science</button>
+            </div>
+            <div className="km-station-body">
+              <div className="km-slot" data-tooltip={`First pigment: ${mixData.name1}`}>
+                <span className="km-slot-swatch" style={{ background: mixData.p1 }} />
+                <span className="km-slot-label">{mixData.name1}</span>
+              </div>
+              <span className="km-plus">+</span>
+              <div className="km-slot" data-tooltip={`Second pigment: ${mixData.name2}`}>
+                <span className="km-slot-swatch" style={{ background: mixData.p2 }} />
+                <span className="km-slot-label">{mixData.name2}</span>
+              </div>
+              <span className="km-arrow">→</span>
+              <div className="km-result-slot" data-tooltip={`Physical subtractive blend: ${mixData.km}`}>
+                <span className="km-result-swatch" style={{ background: mixData.km }} />
+                <div className="km-result-meta"><span className="km-badge">K-M Physical</span><span className="km-hex">{mixData.km}</span></div>
+              </div>
+              <div className="km-compare-slot" data-tooltip={`Screen RGB average for comparison: ${mixData.rgb}`}>
+                <span className="km-compare-swatch" style={{ background: mixData.rgb }} />
+                <div className="km-result-meta"><span className="km-badge-rgb">RGB Avg</span><span className="km-hex">{mixData.rgb}</span></div>
+              </div>
+              <button
+                className="km-mix-btn"
+                onClick={() => {
+                  pickColor(mixData.km, `${mixData.name1} + ${mixData.name2}`);
+                }}
+                data-tooltip="Load this physically modeled mixture onto your brush."
+              >
+                <span>🗡️ Load blend</span>
+              </button>
+            </div>
+          </div>
+          <p className="bench-whisper">Let the water do some of the painting.</p>
+        </div>
       </footer>
 
-      {toast && <div className="toast" role="status">{toast}</div>}
+      {toast && <div className="toast show" role="status">{toast}</div>}
 
       <EpisodeModal
         isOpen={selectorOpen}
@@ -1548,6 +1643,8 @@ export default function App() {
         isOpen={mixModalOpen}
         onClose={() => setMixModalOpen(false)}
       />
+
+      <Onboarding open={onboardingOpen} onFinish={finishOnboarding} />
     </main>
   );
 }
